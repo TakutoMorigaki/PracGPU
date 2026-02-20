@@ -449,7 +449,20 @@ bool step(board_2048 &board, Action action){
         }
     }
 
+    is_gameover(board);
+
     return moved;
+}
+
+// ゲームオーバーの判定
+void is_gameover(board_2048 &board){
+    if(board.vacant_total == 0 &&
+            !CanMove_R(board) &&
+            !CanMove_L(board) &&
+            !CanMove_U(board) &&
+            !CanMove_D(board)){
+                board.gameover_flg = true;
+            }
 }
 
 
@@ -468,7 +481,7 @@ void get_state(const board_2048 &board, float state[16]){
                 idx++;
             }
             else if(board.grid[i][j] == 1){
-                state[idx] = std::log2(1.5f);
+                state[idx] = 0.5f;
                 idx++;
             }
             else{

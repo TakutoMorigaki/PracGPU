@@ -16,10 +16,11 @@ PYBIND11_MODULE(game2048_env, m){
             [](Env2048 &env, int action){
                 float reward;
                 bool done;
+                int score;
 
-                auto state = env.Step(action, reward, done);
+                auto state = env.Step(action, reward, done, score);
 
-                return py::make_tuple(state, reward, done);
+                return py::make_tuple(state, reward, done, score);
             }
         )
 

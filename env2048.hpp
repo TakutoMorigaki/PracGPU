@@ -13,7 +13,7 @@ public:
 
     std::vector<float> reset();
 
-    std::vector<float> Step(int action, float &reward, bool &done);
+    std::vector<float> Step(int action, float &reward, bool &done, int &score);
 
     std::vector<float> GetState();
 };

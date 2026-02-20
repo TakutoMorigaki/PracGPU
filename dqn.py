@@ -3,7 +3,9 @@ import random
 import torch.nn as nn
 import torch.nn.functional as F
 import game2048_env
+import csv
 from collections import deque
+from torch.utils.tensorboard import SummaryWriter
 
 
 # Qネットワーク
@@ -35,15 +37,15 @@ class RepalyBuffer:
 
     def sample(self, batch_size):
         batch = random.sample(self.buffer, batch_size)
-        
+
         states, actions, rewards, next_states, dones = zip(*batch)
 
         return (
             torch.stack(states),
             torch.tensor(actions),
-            torch.tensor(rewards),
+            torch.tensor(rewards, dtype=torch.float32),
             torch.stack(next_states),
-            torch.tensor(dones)
+            torch.tensor(dones, dtype=torch.float32)
         )
 
     def __len__(self):
@@ -69,7 +71,7 @@ class DoubleDQN:
         self.buffer = RepalyBuffer()
 
         self.gamma = 0.99
-        self.batch_size = 96
+        self.batch_size = 128
 
     def select_action(self, state, epsilon):
         if random.random() < epsilon:
@@ -110,10 +112,14 @@ class DoubleDQN:
         target = rewards + self.gamma * next_q * (1 - dones)
         target = target.to(self.device)
 
-        loss = F.mse_loss(q, target.detach())
+        loss = F.smooth_l1_loss(q, target.detach())
+        # print("loss: ", loss.item())
+        # print("q_mean: ", q.mean().item())
+        # print("target mean: ", target.mean().item())
 
         self.optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.q_net.parameters(), 1.0)
         self.optimizer.step()
 
     def update_target(self):
@@ -127,17 +133,29 @@ env = game2048_env.Env2048()
 agent = DoubleDQN(16, 4)
 
 epsilon = 1.0
+epsilon_min = 0.1
+epsilon_decay = 0.9995
 
-for episode in range(500):
+total_steps = 0
+
+results = []
+
+Writer = SummaryWriter('logs/2048_experiment_3')
+
+for episode in range(10000):
     state = env.reset()
 
     done = False
+
+    total_reward = 0.0
+
+    steps = 0
 
     while not done:
         state_t = torch.FloatTensor(state)
         action = agent.select_action(state_t, epsilon)
 
-        next_state, reward, done = env.step(action)
+        next_state, reward, done, score = env.step(action)
 
         agent.buffer.push(
             state_t,
@@ -147,14 +165,28 @@ for episode in range(500):
             torch.tensor(done, dtype=torch.float)
         )
 
+        total_reward += reward
         agent.train()
         state = next_state
+        steps += 1
+        total_steps += 1
 
-    if episode % 10 == 0:
+    if total_steps % 1000 == 0:
         agent.update_target()
 
-    print(episode)
+    results.append([episode, total_reward, score])
+    Writer.add_scalar('Reward/Total', total_reward, episode)
+    Writer.add_scalar('Score/Train', score, episode)
 
-    epsilon *= 0.999
+    print(f"Episode: {episode}, total_reward {total_reward:.2f}, score {score}, epsilon {epsilon}, steps {steps}")
+
+    epsilon *= epsilon_decay
+    if epsilon < epsilon_min:
+        epsilon = 0.4
+
+with open('data.csv', 'w', newline='', encoding='utf-8') as f:
+    writer = csv.writer(f)
+    writer.writerow(['episode', 'total_reward', 'score'])
+    writer.writerows(results)
 
 print("done")

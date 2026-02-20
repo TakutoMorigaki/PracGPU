@@ -48,6 +48,8 @@ void Move_D(board_2048 &board);
 bool apply_action(board_2048 &board, Action action);
 // AIを一手進める
 bool step(board_2048 &board, Action action);
+// ゲームオーバーの判定
+void is_gameover(board_2048 &board);
 // 状態をAI用に変換
 void get_state(const board_2048 &board, float state[16]);
 // ランダムAIの着手方向
