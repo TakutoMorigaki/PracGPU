@@ -41,13 +41,14 @@ std::vector<float> Env2048::GetState(){
     return std::vector<float>(state, state + 16);
 }
 
-std::vector<float> Env2048::Step(int action, float &reward, bool &done, int &score){
+std::vector<float> Env2048::Step(int action, float &reward, bool &done, int &score, int &max){
     int prev_score = calc_score(board);
     bool moved = step(board, (Action)action);
     int now_score = calc_score(board);
     reward = calc_reward(board, now_score, prev_score, moved);
     done = board.gameover_flg;
     score = now_score;
+    max = board.value_max;
 
     return GetState();
 }

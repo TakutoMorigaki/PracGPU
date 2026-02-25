@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import game2048_env
 import csv
+import numpy as np
 from collections import deque
 from torch.utils.tensorboard import SummaryWriter
 
@@ -23,6 +24,24 @@ class QNetwork(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         return self.fc3(x)
+
+
+class CNN_QNetwork(nn.Module):
+    def __init__(self, action_dim):
+        super().__init__()
+
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=2)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=2)
+
+        self.fc1 = nn.Linear(64 * 2 * 2, 128)
+        self.fc2 = nn.Linear(128, action_dim)
+
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        return self.fc2(x)
 
 
 # バッファー(この中からデータを学習)
@@ -57,8 +76,8 @@ class DoubleDQN:
     def __init__(self, state_dim, action_dim):
         self.device = "cuda"
 
-        self.q_net = QNetwork(state_dim, action_dim).to(self.device)
-        self.target_net = QNetwork(state_dim, action_dim).to(self.device)
+        self.q_net = CNN_QNetwork(action_dim).to(self.device)
+        self.target_net = CNN_QNetwork(action_dim).to(self.device)
 
         self.target_net.load_state_dict(
             self.q_net.state_dict()
@@ -77,6 +96,7 @@ class DoubleDQN:
         if random.random() < epsilon:
             return random.randrange(4)
 
+        state = preprocess_state(state)
         state = state.unsqueeze(0).to(self.device)
 
         with torch.no_grad():
@@ -99,6 +119,9 @@ class DoubleDQN:
 
         # 現在のQ値
         q_values = self.q_net(states)
+        # print(q_values.shape)
+        # print(actions.shape)
+        # print(states.shape)
         q = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
 
         # 行動選択(main)
@@ -128,6 +151,18 @@ class DoubleDQN:
         )
 
 
+def preprocess_state(state):
+    state = np.array(state, dtype=np.float32)
+
+    state = torch.FloatTensor(state)
+
+    state = state.view(4, 4)
+
+    state = state.unsqueeze(0)
+
+    return state
+
+
 env = game2048_env.Env2048()
 
 agent = DoubleDQN(16, 4)
@@ -140,7 +175,7 @@ total_steps = 0
 
 results = []
 
-Writer = SummaryWriter('logs/2048_experiment_3')
+Writer = SummaryWriter('logs/2048_experiment_5')
 
 for episode in range(10000):
     state = env.reset()
@@ -152,16 +187,16 @@ for episode in range(10000):
     steps = 0
 
     while not done:
-        state_t = torch.FloatTensor(state)
+        state_t = preprocess_state(state)
         action = agent.select_action(state_t, epsilon)
 
-        next_state, reward, done, score = env.step(action)
+        next_state, reward, done, score, max = env.step(action)
 
         agent.buffer.push(
             state_t,
             torch.tensor(action),
             torch.tensor(reward, dtype=torch.float),
-            torch.FloatTensor(next_state),
+            torch.FloatTensor(preprocess_state(next_state)),
             torch.tensor(done, dtype=torch.float)
         )
 
@@ -178,11 +213,11 @@ for episode in range(10000):
     Writer.add_scalar('Reward/Total', total_reward, episode)
     Writer.add_scalar('Score/Train', score, episode)
 
-    print(f"Episode: {episode}, total_reward {total_reward:.2f}, score {score}, epsilon {epsilon}, steps {steps}")
+    print(f"Episode: {episode}, total_reward {total_reward:.2f}, score {score}, epsilon {epsilon:.4f}, steps {steps}, max {max}")
 
     epsilon *= epsilon_decay
     if epsilon < epsilon_min:
-        epsilon = 0.4
+        epsilon = 0.5
 
 with open('data.csv', 'w', newline='', encoding='utf-8') as f:
     writer = csv.writer(f)

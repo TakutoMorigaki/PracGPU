@@ -5,6 +5,7 @@
 struct board_2048 {
     unsigned int grid[4][4];    // ボードを表す4x4の二次元配列
     int vacant_total;           // 現在の空きマスの個数
+    int value_max;              // 最大マスの値
     bool gameover_flg;          // ゲームオーバー判定フラグ
     bool move_r_flg[4][4];      // あるマスにおいて右に動けるかの判定フラグ
     bool move_l_flg[4][4];      // あるマスにおいて左に動けるかの判定フラグ

@@ -75,6 +75,7 @@ void init_board(board_2048 &board){
     }
 
     board.vacant_total = 15;
+    board.value_max = 0;
 }
 
 // 一つのマスにおいて上下左右に動けるかを判定する
@@ -462,6 +463,12 @@ void is_gameover(board_2048 &board){
             !CanMove_U(board) &&
             !CanMove_D(board)){
                 board.gameover_flg = true;
+                for(int i = 0; i < 4; i++){
+                    for(int j = 0; j < 4; j++){
+                        if(board.grid[i][j] > board.value_max)
+                            board.value_max = board.grid[i][j];
+                    }
+                }
             }
 }
 
