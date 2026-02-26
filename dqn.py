@@ -175,9 +175,9 @@ total_steps = 0
 
 results = []
 
-Writer = SummaryWriter('logs/2048_experiment_5')
+Writer = SummaryWriter('logs/2048_experiment_6')
 
-for episode in range(10000):
+for episode in range(15000):
     state = env.reset()
 
     done = False

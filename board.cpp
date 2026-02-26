@@ -463,12 +463,10 @@ void is_gameover(board_2048 &board){
             !CanMove_U(board) &&
             !CanMove_D(board)){
                 board.gameover_flg = true;
-                for(int i = 0; i < 4; i++){
-                    for(int j = 0; j < 4; j++){
+                for(int i = 0; i < 4; i++)
+                    for(int j = 0; j < 4; j++)
                         if(board.grid[i][j] > board.value_max)
                             board.value_max = board.grid[i][j];
-                    }
-                }
             }
 }
 
@@ -479,7 +477,7 @@ int ai_direc_random(){
 }
 
 // 状態をAI用に変換
-void get_state(const board_2048 &board, float state[16]){
+void get_state(board_2048 &board, float state[16]){
     int idx = 0;
     for(int i = 0; i < 4; i++){
         for(int j = 0; j < 4; j++){

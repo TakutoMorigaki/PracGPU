@@ -16,6 +16,9 @@ float calc_reward(board_2048 &board, int now_score, int prev_score, bool moved){
         reward -= 0.2f;
     }
 
+    if(board.value_max == board.grid[0][0])
+        reward += 0.2;
+
     reward += log2(now_score - prev_score + 1);
 
     reward += 0.25f * board.vacant_total;
